@@ -1,6 +1,6 @@
 from vosk import Model, KaldiRecognizer
 import pyaudio
-import kasa
+
 import asyncio
 import time
 import os
@@ -12,7 +12,7 @@ import speak
 # 1 - phones
 # 2 - USB1 - pnp mic
 # 3 - USB2 - jabralink
-inputDevIdx = 2
+inputDevIdx = 0
 
 #Audio rate for model and input audio channel
 RATE = 44100
@@ -20,120 +20,175 @@ RATE = 44100
 # BUffer Size
 bufferSize = 22050
 
-def turnOn(dev_name):
-    '''
-    Turn device on
-    '''
-    dev_name = dev_name.replace(' ','')
-    print(f'Turing on : {dev_name}')
-    for dev in devices:
-        if dev_name in devices[dev].alias.lower():
-            print(dev_name)
-            print(devices[dev].alias)
-            try:
-                asyncio.run(devices[dev].turn_on())
-                #time.sleep(1)
-            except:
-                pass
+import kasa
+class Devices:
+    def __init__ (self, devs={}):
+        '''
+        Devices Lsting and control from kasa
+        '''
+        self.devices = devs
+        self.loop = asyncio.get_event_loop ()
+        self.updateDeviceList ()
 
-def turnOff(dev_name):
-    '''
-    Turn device on
-    '''
-    attempted = 0
-    completed = 0
-    dev_name = dev_name.replace(' ','')
-    print(f'Turing off : {dev_name}')
-    for dev in devices:
-        if dev_name in devices[dev].alias.lower():
-            #print(dev_name)
-            attempted += 1
-            print(devices[dev].alias)
-            try:
-                asyncio.run(devices[dev].turn_off())
-                #time.sleep(1)
-            except Exception as e:
-                print(e)
-                completed += 1
-                #speak.error()
-                pass
+        print (self.devices)
 
-    return completed
+    def turnOn (self, dev_name):
+        '''
+        Turn device on
+        '''
+        dev_name = dev_name.replace (' ','')
+        print (f'Turing on : {dev_name}')
+        for dev in self.devices:
+            if dev_name in self.devices[dev].alias.lower():
+                try:
+                    self.loop.run_until_complete (self.devices[dev].turn_on())
+                    self.loop.run_until_complete (self.devices[dev].update())
+                    return True
+                except Exception as e:
+                    print (e)
+        return False
 
-def processCmd(text):
-    '''
-    Process voice command
-    '''
+    def turnOff (self, dev_name):
+        '''
+        Turn device on
+        '''
 
-    command = text.replace('alexa', '')
-    print(command)
+        dev_name = dev_name.replace (' ','')
+        print (f'Turing off : {dev_name}')
+        for dev in self.devices:
+            if dev_name in self.devices[dev].alias.lower():
+                try:
+                    self.loop.run_until_complete (self.devices[dev].turn_off())
+                    self.loop.run_until_complete (self.devices[dev].update())
+                    return True
+                except Exception as e:
+                    print (e)
+        return False
+    
+    def updateDeviceList (self):
+        '''
+        Update device list from kasa
+        '''
+        self.devices = self.loop.run_until_complete (kasa.Discover.discover())
 
-    if 'turn' in command:
-        # check for turn on/off commands
-        if 'turn on' in command:
-            dev_name = command.replace('turn on ', '')
-            dev_name = dev_name.replace('the ', '')
-            turnOn(dev_name)
-            speak.success()
+class Assistant:
+    def __init__(self, speaker, devices=Devices(), local='Chattanooga, Tennessee'):
+        '''
+        Offline Assistant
+        '''
+        self.devices = devices
+        self.speaker = speaker
+        self.defaultArea = local
+
+        self.weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+
+    def processCmd(self, text):
+        '''
+        Process voice command
+        '''
+        command = text.replace('alexa', '')
+        print(command)
+
+        if 'turn' in command:
+            # check for turn on/off commands
+            if 'turn on' in command:
+                dev_name = command.replace('turn on ', '')
+                dev_name = dev_name.replace('the ', '')
+                if (self.devices.turnOn(dev_name)):
+                    self.speaker.success()
+                else:
+                    self.speaker.error()
+                return
+            
+            elif 'turn off' in command:
+                dev_name = command.replace('turn off ', '')
+                dev_name = dev_name.replace('the ', '')
+                if ( self.devices.turnOff(dev_name)):
+                    self.speaker.success()
+                else:
+                    self.speaker.error()
+                return
+
+        if ('what' in command):
+            # Answer querys
+            query = command.replace('what is ', '')
+            query = query.replace("what's ", '')
+            query = query.replace("the ", '')
+
+            if 'weather' in query:
+                # Get wheather in location if avilable
+                area = query.replace ('weather','')
+                if 'in' in area:
+                    area = area.replace ('in','')
+                else:
+                    area = self.defaultArea
+                report = weather.getCurrentWeather (area)
+                self.speaker.speakText (report)
+            
+            if 'time' in query:
+                # Get time now
+                now = time.localtime ()
+                if now.tm_min == 0:
+                    minutes = " o-clock"
+                elif now.tm_min < 10:
+                    minutes = " o {}".format(now.tm_min)
+                else:
+                    minutes = str(now.tm_min)
+
+                hours = ((now.tm_hour+12) % 12)
+                if hours == 0:
+                    hours = 12
+
+                self.speaker.speakText ("The time is {} {}".format(hours, minutes) )
+
+            if 'date' in query:
+                # get the date
+                today = time.localtime ()
+                self.speaker.speakText ("The date is {} {} {}".format(today.tm_mon, today.tm_mday, today.tm_year))
+
+            if 'day' in query:
+                # get the date
+                today = time.localtime ()
+                self.speaker.speakText ("Today is {}".format(self.weekdays[today.tm_wday]))
+
+            if 'moon' in query:
+                # get moon data
+                report = weather.readWeather (self.defaultArea)
+                self.speak ("")
+
+        if 'connect' in command:
+            # Try blue tooth conenction
+            self.speaker.success()
             return
-        elif 'turn off' in command:
-            dev_name = command.replace('turn off ', '')
-            dev_name = dev_name.replace('the ', '')
-            turnOff(dev_name)
-            speak.success()
-            return
-
-    if ('what is ' in command) or ("what's " in command):
-        # Answer querys
-        query = command.replace('what is ', '')
-        query = query.replace("what's ", '')
-        query = query.replace("the ", '')
-
-        if 'weather in ' in query:
-            # Get wheather in location if avilable
-            area = query.replace('weather in ','')
-            weather.readWeather(area)
-            speak.success()
-            return
-
-    if 'connect' in command:
-        # Try blue tooth conenction
-        speak.success()
-        return
-
-    print(command)
-    speak.error()
-
-devices = {}
-def updateDeviceList():
-    '''
-    Update device list from kasa
-    '''
-    global devices
-    devices = asyncio.run(kasa.Discover.discover())
 
 MAX_ERRS = 100
 err = 0
 
 if __name__ == "__main__":
     
-    updateDeviceList()
-
     print(os.path.abspath(__file__))
+    # Open Voice recognizer
     app_root = os.path.abspath(os.getcwd())
     model_dir = app_root + r"/vosk-model-small-en-us-0.15"
     model = Model(model_dir)
     recognizer = KaldiRecognizer(model, RATE)
 
-    mic = pyaudio.PyAudio()
-    stream = mic.open(format=pyaudio.paInt16,
- channels=1,
- rate=RATE,
- input=True,
- frames_per_buffer=bufferSize ,
- input_device_index=inputDevIdx)
+    # Open Audio Control
+    audio = pyaudio.PyAudio()
+    devs = Devices ()
+    speaker = speak.Speaker (audio)
+    assistant = Assistant (speaker)
+
+    # Open Mic Stream
+    stream = audio.open(format=pyaudio.paInt16,
+                        channels=1,
+                        rate=RATE,
+                        input=True,
+                        frames_per_buffer=bufferSize ,
+                        input_device_index=inputDevIdx)
     stream.start_stream()
 
+    # Main loop
     text = ""
     while err < MAX_ERRS:
         try:
@@ -144,15 +199,16 @@ if __name__ == "__main__":
                 result = recognizer.Result()[14:]
                 text += result[:-3]
                 #print(len(result))
-                #print(text)
+                print(text)
 
                 if "alexa" in text:
                     #stream.stop_stream()
                     #print(text)
-                    processCmd(text[text.index('alexa'):])
+                    assistant.processCmd(text[text.index('alexa'):])
                     text = ""
                     #stream.start_stream()
                 else:
+                    text += " "
                     if len(text) > 41:
                         text = text[-40:]
                     
