@@ -1,0 +1,8 @@
+**/bin
+**/create
+**/include
+**/lib
+**/lib64
+**/logs
+pyvenv.*
+*.pyc

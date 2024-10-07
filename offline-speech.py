@@ -72,13 +72,14 @@ class Devices:
         self.devices = self.loop.run_until_complete (kasa.Discover.discover())
 
 class Assistant:
-    def __init__(self, speaker, devices=Devices(), local='Chattanooga, Tennessee'):
+    def __init__(self, speaker, devices=Devices(), local='Chattanooga, Tennessee', name="Assistant"):
         '''
         Offline Assistant
         '''
         self.devices = devices
         self.speaker = speaker
         self.defaultArea = local
+        self.name = name
 
         self.weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
 
@@ -86,7 +87,7 @@ class Assistant:
         '''
         Process voice command
         '''
-        command = text.replace('alexa', '')
+        command = text.replace(self.name, '')
         print(command)
 
         if 'turn' in command:
@@ -165,7 +166,6 @@ MAX_ERRS = 100
 err = 0
 
 if __name__ == "__main__":
-    
     print(os.path.abspath(__file__))
     # Open Voice recognizer
     app_root = os.path.abspath(os.getcwd())
@@ -201,10 +201,10 @@ if __name__ == "__main__":
                 #print(len(result))
                 print(text)
 
-                if "alexa" in text:
+                if assistant.name in text:
                     #stream.stop_stream()
                     #print(text)
-                    assistant.processCmd(text[text.index('alexa'):])
+                    assistant.processCmd(text[text.index(assistant.name):])
                     text = ""
                     #stream.start_stream()
                 else:

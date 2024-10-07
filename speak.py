@@ -29,15 +29,25 @@ class Speaker:
     self.engine.setProperty ('voice', voices[1].id)
 
     if 'Windows' in self.pltfrm:
-      #output = subprocess.call ('powershell.exe Add-Type -AssemblyName System.Speech', shell=True)
+      output = subprocess.call ('powershell.exe Add-Type -AssemblyName System.Speech', shell=True)
       pass
 
+    # Override to pyaudio
+    self.pltfrm = 'Windows'
+    self.ready = True
+    try:
+      self.success ()
+    except:
+      self.ready = False
       
   def speakText(self, text):
     '''
     '''
     # put report into command
     print(text)
+
+    if not self.ready:
+      return
 
     if 'Linux' in self.pltfrm:
       # Call espeak and buffer in subprocess PIPE
@@ -59,15 +69,23 @@ class Speaker:
     '''
     Play Success sound to indicate completed command
     '''
+    if not self.ready:
+      return
     self.playSoundFile ('./wav/success.wav')
 
   def error(self):
     '''
     Play error sound to indicate failed command
     '''
+    if not self.ready:
+      return
     self.playSoundFile ('./wav/error-2.wav')
 
   def playSoundFile (self, filaname):
+    '''
+    '''
+    if not self.ready:
+      return
     if 'Linux' in self.pltfrm:
       output = subprocess.check_output(('aplay', f'-D{outputDev}', filaname))
     elif 'Darwin' in self.pltfrm:

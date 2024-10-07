@@ -1,0 +1,10 @@
+[Unit]
+Description=Alexa Service
+After=network.service
+
+[Service]
+ExecStart=/home/admin/workspace/offline-assistant/runAlexaServer.sh
+Type=simple
+
+[Install]
+WantedBy=default.target

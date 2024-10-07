@@ -1,0 +1,6 @@
+pyaudio
+pyttsx3
+pywave
+python_weather
+vosk
+python-kasa
