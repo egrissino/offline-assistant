@@ -72,7 +72,7 @@ class Devices:
         self.devices = self.loop.run_until_complete (kasa.Discover.discover())
 
 class Assistant:
-    def __init__(self, speaker, devices=Devices(), local='Chattanooga, Tennessee', name="Assistant"):
+    def __init__(self, speaker, devices=Devices(), local='Chattanooga, Tennessee', name="assistant"):
         '''
         Offline Assistant
         '''
@@ -177,7 +177,7 @@ if __name__ == "__main__":
     audio = pyaudio.PyAudio()
     devs = Devices ()
     speaker = speak.Speaker (audio)
-    assistant = Assistant (speaker)
+    assistant = Assistant (speaker, name="home")
 
     # Open Mic Stream
     stream = audio.open(format=pyaudio.paInt16,
