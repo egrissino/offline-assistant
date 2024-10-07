@@ -4,5 +4,6 @@
 **/lib
 **/lib64
 **/logs
+**/vosk-*
 pyvenv.*
 *.pyc

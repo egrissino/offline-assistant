@@ -169,7 +169,8 @@ if __name__ == "__main__":
     print(os.path.abspath(__file__))
     # Open Voice recognizer
     app_root = os.path.abspath(os.getcwd())
-    model_dir = app_root + r"/vosk-model-small-en-us-0.15"
+    # model_dir = app_root + r"/vosk-model-small-en-us-0.15"
+    model_dir = app_root + r"/vosk-model-en-us-0.22-lgraph"
     model = Model(model_dir)
     recognizer = KaldiRecognizer(model, RATE)
 
